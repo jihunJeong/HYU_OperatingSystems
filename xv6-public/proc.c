@@ -321,7 +321,7 @@ wait(void)
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
 //Implement Multi Level Queue
-#if mode == MULTILEVEL_SCHED
+#ifdef MULTILEVEL_SCHED
   void
   scheduler(void)
   {
@@ -360,7 +360,7 @@ wait(void)
   }
 
 //implement Multi Level Feedback Queue
-#elif mode == MLFQ_SCHED
+#elif MLFQ_SCHED
   void
   scheduler(void)
   {
