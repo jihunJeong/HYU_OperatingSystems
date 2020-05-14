@@ -10,6 +10,7 @@
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
+ 
 } ptable;
 
 static struct proc *initproc;
@@ -89,7 +90,7 @@ found:
   p->state = EMBRYO;
   p->pid = nextpid++;
 #ifdef MLFQ_SCHED
-  p->priority = 0
+  p->priority = 0;
 #endif
 
   release(&ptable.lock);
@@ -337,24 +338,50 @@ scheduler(void)
     sti();
 
     // Loop over process table looking for process to run.
+    int check_even = 0;
+
     acquire(&ptable.lock);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
-      
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
+      if(p->state == RUNNABLE && p->pid % 2 == 0){
+        check_even = 1;
+        break;
+      }
+    }
+     
+    if (check_even) {
+      for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if(p->pid % 2 == 1 || p->state != RUNNABLE)
+            continue;
 
-      swtch(&(c->scheduler), p->context);
-      switchkvm();
+        // Switch to chosen process.  It is the process's job
+        // to release ptable.lock and then reacquire it
+        // before jumping back to uss.
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
 
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      c->proc = 0;
+        swtch(&(c->scheduler), p->context);
+        switchkvm();
+
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
+      }
+    } else {
+      for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if(p->pid % 2 == 0 || p->state != RUNNABLE)
+          continue;
+
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
+
+        swtch(&(c->scheduler), p->context);
+        switchkvm();
+        
+        c->proc = 0;
+        break;
+      }
     }
     release(&ptable.lock);
 

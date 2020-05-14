@@ -1,12 +1,6 @@
 #include "types.h"
 #include "defs.h"
 
-void
-yields(void)
-{
-    
-}
-
 int
 getlev(void)
 {
@@ -22,7 +16,7 @@ setpriority(int pid, int priority)
 int
 sys_yield(void)
 {
-    yields();
+    yield();
     return 0;
 }
 
