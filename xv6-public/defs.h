@@ -185,7 +185,13 @@ void            switchuvm(struct proc*);
 void            switchkvm(void);
 int             copyout(pde_t*, uint, void*, uint);
 void            clearpteu(pde_t *pgdir, char *uva);
-int             myfunction(char*);
+
+/*
+// sysscheduler.c
+void            yield(void);
+int             getlev(void);
+int             setpriority(int pid, int priority);
+*/
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
