@@ -91,6 +91,7 @@ found:
   p->pid = nextpid++;
 #ifdef MLFQ_SCHED
   p->priority = 0;
+  p->level = 0;
 #endif
 
   release(&ptable.lock);
