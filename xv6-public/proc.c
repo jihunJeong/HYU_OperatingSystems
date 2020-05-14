@@ -88,6 +88,9 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+#ifdef MLFQ_SCHED
+  p->priority = 0
+#endif
 
   release(&ptable.lock);
 
