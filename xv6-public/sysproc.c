@@ -65,12 +65,20 @@ sys_sleep(void)
   if(argint(0, &n) < 0)
     return -1;
   acquire(&tickslock);
+
   ticks0 = ticks;
   while(ticks - ticks0 < n){
     if(myproc()->killed){
       release(&tickslock);
       return -1;
     }
+
+//Reset Process in MLFQ_SCHED
+  #ifdef MULFQ_SCHED
+    struct proc *p = myproc();
+    p->level = 0;
+    p->quantum = 0;
+  #endif
     sleep(&ticks, &tickslock);
   }
   release(&tickslock);

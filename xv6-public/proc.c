@@ -89,10 +89,9 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
-#ifdef MLFQ_SCHED
   p->priority = 0;
   p->level = 0;
-#endif
+  p->quantum = 0;
 
   release(&ptable.lock);
 
@@ -395,35 +394,83 @@ void
 scheduler(void)
 {
   struct proc *p;
+
   struct cpu *c = mycpu();
   c->proc = 0;
-  
+
+  #ifdef MLFQ_SCHED
+    int countticks = 0;  
+  #endif
+    
   for(;;){
     // Enable interrupts on this processor.
     sti();
+   
+    struct proc *temp = ptable.proc;
 
+    int checcount = 0;
+    //temp->level = MLFQ_K;
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
-      
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
+      if(p->state != RUNNABLE || p->level >= MLFQ_K){
+      	checcount++;
+      	continue;
+      }
 
-      swtch(&(c->scheduler), p->context);
-      switchkvm();
-
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      c->proc = 0;
+      // Compare process level and choose minimum level
+      if(p->level < temp->level){
+        temp = p;
+      }
+      // Compare precess priority if they are same level
+      else if(p->level == temp->level && p->priority > temp->priority){
+        temp = p;
+      }
     }
-    release(&ptable.lock);
 
+    //there don't remain available proceses
+    if(temp->state != RUNNABLE){
+    	priorityboosting();
+    } else {
+	    while(temp->quantum < (temp->level)*2 + 4){
+	      // Switch to chosen process.  It is the process's job
+	      // to release ptable.lock and then reacquire it
+	      // before jumping back to us.
+	     	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        		if(p->pid != temp->pid || p->state != RUNNABLE)
+          			continue;
+
+          		countticks++;
+
+        		c->proc = p;
+        		switchuvm(p);
+        		p->state = RUNNING;
+
+        		swtch(&(c->scheduler), p->context);
+        		switchkvm();
+        
+        		c->proc = 0;
+       			break;
+      		}
+	      temp->quantum++;
+	    }
+
+    	if(temp->level < MLFQ_K-1){
+	    	temp->level++;
+	        temp->quantum = 0;
+	    } else {
+	    	temp->level++;
+	    	temp->quantum = 0;	
+	    	temp->state = SLEEPING;
+	    }
+	}
+
+	if(countticks >= 100){
+		countticks = 0;
+		priorityboosting();
+	}
+
+    release(&ptable.lock);
   }
 }
 
@@ -461,10 +508,10 @@ scheduler(void)
       c->proc = 0;
     }
     release(&ptable.lock);
-
   }
 }
 #endif
+
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state. Saves and restores
 // intena because intena is a property of this
@@ -640,5 +687,42 @@ procdump(void)
         cprintf(" %p", pc[i]);
     }
     cprintf("\n");
+  }
+}
+
+int
+getlev(void)
+{
+    struct proc *curproc = myproc();
+    return curproc->level;
+}
+
+int
+setpriority(int pid, int priority)
+{
+    if(priority < 0 || priority > 10)
+      return -2;
+
+    struct proc *p;
+    struct proc *curproc = myproc();
+
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if((p->pid = pid) && (p->parent->pid == curproc->pid)){
+        p->priority = priority;
+        return 0;
+      }
+    }
+    
+    return -1;
+}
+
+void
+priorityboosting(void)
+{
+  struct proc *p;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    p->level = 0;
+    p->quantum = 0;
+  	p->state = RUNNABLE;
   }
 }
