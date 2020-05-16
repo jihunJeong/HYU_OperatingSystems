@@ -406,6 +406,12 @@ scheduler(void)
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
   
+	//Priority Boosting, every 100 ticsk
+    if(countticks >= 100){
+		countticks = 0;
+		priorityboosting();
+	}
+
 	struct proc *temp = 0;
 	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE || p->level >= MLFQ_K || p->quantum >= (p->level)*2 + 4){
@@ -456,12 +462,6 @@ scheduler(void)
 	    	break;
 		}
 	}
-	//Priority Boosting, every 100 ticsk
-    if(countticks >= 100){
-		countticks = 0;
-		priorityboosting();
-	}
-
 	release(&ptable.lock);	
   }
 }
