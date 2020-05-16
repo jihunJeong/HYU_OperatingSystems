@@ -72,8 +72,8 @@ sys_sleep(void)
       release(&tickslock);
       return -1;
     }
-
-//Reset Process in MLFQ_SCHED
+  
+  //Reset Process in MLFQ_SCHED
   #ifdef MULFQ_SCHED
     struct proc *p = myproc();
     p->level = 0;

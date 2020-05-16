@@ -402,15 +402,10 @@ scheduler(void)
   for(;;){
     // Enable interrupts on this processor.
     sti();
-   
-    if(countticks >= 100){
-		countticks = 0;
-		priorityboosting();
-	}
     
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    //
+  
 	struct proc *temp = 0;
 	for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE || p->level >= MLFQ_K || p->quantum >= (p->level)*2 + 4){
@@ -432,8 +427,7 @@ scheduler(void)
       }
     }
 
-    //there don't remain available procesess
-    
+    //If temp is 0, there don't remain available procesess
     if(temp == 0){
     	priorityboosting();
     } else {
@@ -462,6 +456,12 @@ scheduler(void)
 	    	break;
 		}
 	}
+	//Priority Boosting, every 100 ticsk
+    if(countticks >= 100){
+		countticks = 0;
+		priorityboosting();
+	}
+
 	release(&ptable.lock);	
   }
 }
