@@ -427,7 +427,7 @@ scheduler(void)
         temp = p;
       }
       // Compare precess priority if they are same level
-      else if(p->level == temp->level && p->priority > temp->priority){
+      else if(p->level == temp->level && p->priority >= temp->priority){
         temp = p;
       }
     }
@@ -698,10 +698,9 @@ setpriority(int pid, int priority)
       return -2;
 
     struct proc *p;
-    struct proc *curproc = myproc();
     acquire(&ptable.lock);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if((p->pid = pid) && (p->parent->pid == curproc->pid)){
+      if((p->pid == pid) && (p->parent->pid == myproc()->pid)){
         p->priority = priority;
         release(&ptable.lock);
         return 0;
