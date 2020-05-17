@@ -428,7 +428,7 @@ scheduler(void)
         temp = p;
       }
       // Compare precess priority if they are same level
-      else if(p->level == temp->level && p->priority >= temp->priority){
+      else if(p->level == temp->level && p->priority > temp->priority){
         temp = p;
       }
     }
