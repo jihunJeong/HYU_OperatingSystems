@@ -442,3 +442,70 @@ sys_pipe(void)
   fd[1] = fd1;
   return 0;
 }
+
+int useradd(char* username, char* password)
+{
+
+    char userid[20];
+    //char userpwd[20];
+    struct inode* ip;
+
+    begin_op();
+    if((ip = namei("./list.txt")) == 0) {
+        end_op();
+        return -1;
+    }
+
+    //If username already exists, Then Add Failed
+    ilock(ip);
+    for(int i = 0; i < 10; i++) {
+      memset(userid, 0, sizeof(char) * 20);
+      readi(ip, userid, i * 40, 20);
+
+      if(strncmp(userid, username, 20) == 0) {
+        iunlock(ip);
+        end_op();
+        cprintf("Already exists\n");
+
+        return -1;
+      }
+    }
+
+    //Add New User
+    for(int i = 0; i < 10; i++) {
+      memset(userid, 0, sizeof(char) * 20);
+      readi(ip, userid, i * 40, 20);
+
+      if(userid[0] == 0) {
+        if(writei(ip, username, i*40, 20) > 0 && writei(ip, password, i*40+20, 20) > 0) {
+          cprintf("Add success\n");
+
+          iunlock(ip);
+          end_op();
+
+          begin_op();
+          struct inode* dir;
+          if((dir = create(username, T_DIR, 0, 0)) != 0) {
+            end_op();
+            return 0;
+          }
+
+          strncpy(dir->author, username, 20);
+          iupdate(dir);
+          iunlockput(dir);
+          end_op();
+          return 0;
+        } else {
+          cprintf("Write Failed\n");
+        }
+      } 
+    }
+    cprintf("Full UserList\n");
+    return -1;
+}
+
+int userdel(char* username)
+{
+  return 0;
+}
+

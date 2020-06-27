@@ -23,6 +23,9 @@ struct inode {
   short nlink;
   uint size;
   uint addrs[NDIRECT+1];
+
+  //Project3
+  char *author;
 };
 
 // table mapping major device number to

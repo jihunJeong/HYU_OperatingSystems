@@ -1,3 +1,9 @@
+#include "types.h"
+#include "stat.h"
+#include "user.h"
+#include "fcntl.h"
+
+
 // Shell.
 
 #include "types.h"
@@ -12,6 +18,8 @@
 #define BACK  5
 
 #define MAXARGS 10
+
+int stacksize;
 
 struct cmd {
   int type;
@@ -75,7 +83,12 @@ runcmd(struct cmd *cmd)
     ecmd = (struct execcmd*)cmd;
     if(ecmd->argv[0] == 0)
       exit();
-    exec(ecmd->argv[0], ecmd->argv);
+
+    if(stacksize == 0) {
+    	exec(ecmd->argv[0], ecmd->argv);
+    } else {
+    	exec2(ecmd->argv[0], ecmd->argv, stacksize);
+    }
     printf(2, "exec %s failed\n", ecmd->argv[0]);
     break;
 
@@ -133,7 +146,7 @@ runcmd(struct cmd *cmd)
 int
 getcmd(char *buf, int nbuf)
 {
-  printf(2, "$ ");
+  printf(2, "> ");
   memset(buf, 0, nbuf);
   gets(buf, nbuf);
   if(buf[0] == 0) // EOF
@@ -142,11 +155,25 @@ getcmd(char *buf, int nbuf)
 }
 
 int
+list(void)
+{
+  getinfo();
+  return 0;
+}
+
+void append(char *dst, char c) {
+    char *p = dst;
+    while(*p != '\0') p++;
+    *p = c;
+    *(p+1) = '\0';
+}
+
+int
 main(void)
 {
   static char buf[100];
   int fd;
-  
+
   // Ensure that three file descriptors are open.
   while((fd = open("console", O_RDWR)) >= 0){
     if(fd >= 3){
@@ -154,25 +181,59 @@ main(void)
       break;
     }
   }
+  getadmin("2016025969");
+  printf(1, "[Process Manager]\n");
+  printf(1, "\n");
 
   // Read and run input commands.
   while(getcmd(buf, sizeof(buf)) >= 0){
-    if(strcmp(buf, "logout\n") == 0) {
-        exit();
-        //char *argv[] = { "sh", 0 };
-        //exec("p3_login", argv);
+    char word[5][60];
+    int i =0;
+    int j = 0;
+    int len = 0;
+    int wcnt = 0;
+    for(len = 0; len < strlen(buf); len++) {
+      if(buf[len] == '\n'){
+        break;
+      }
     }
-
-    if(buf[0] == 'c' && buf[1] == 'd' && buf[2] == ' '){
-      // Chdir must be called by the parent, not the child.
-      buf[strlen(buf)-1] = 0;  // chop \n
-      if(chdir(buf+3) < 0)
-        printf(2, "cannot cd %s\n", buf+3);
-      continue;
+    
+    while(i < len && buf[i] == ' ') ++i;
+    for(; i < len; ++i) {
+       if(buf[i] != ' '){
+          word[wcnt][j++] = buf[i];
+       }
+       else if(buf[i+1] != ' ' && buf[i+1]) {
+         word[wcnt++][j] = 0;
+         j = 0;
+       }
     }
-    if(fork1() == 0)
-      runcmd(parsecmd(buf));
-    wait();
+    word[wcnt++][j] = 0;
+    
+    if(strcmp(word[0], "list") == 0) {
+        list();
+    } else if(strcmp(word[0], "exit") == 0) {
+       printf(1, "Bye!\n");
+       break;
+    } else if(strcmp(word[0], "kill") == 0) {
+       if(kill(atoi(word[1])) == 0) {
+ 	 	 printf(2, "kill success!\n");
+         wait();
+       } else {
+       	 printf(2, "kill failed!\n");
+       }
+    } else if(strcmp(word[0], "memlim") == 0) {
+       if(setmemorylimit(atoi(word[1]), atoi(word[2])) == 0) {
+        printf(2, "setmemorylimit success!\n");
+       } else {
+       	printf(1, "setmemorylimit failed!\n");
+       }
+    } else if(strcmp(word[0], "execute") == 0) {
+    	stacksize = 0;
+    	stacksize = atoi(word[2]);
+    	if(fork1() == 0)
+      		runcmd(parsecmd(word[1]));
+    }
   }
   exit();
 }

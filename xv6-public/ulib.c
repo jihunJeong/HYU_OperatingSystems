@@ -104,3 +104,27 @@ memmove(void *vdst, const void *vsrc, int n)
     *dst++ = *src++;
   return vdst;
 }
+
+int
+strscmp(const char *p, const char *q, uint n)
+{
+  while(n > 0 && *p && *p == *q)
+    n--, p++, q++;
+  if(n == 0)
+    return 0;
+  
+  return (uchar)*p - (uchar)*q;
+}
+
+char*
+strscpy(char *s, const char *t, int k, int n)
+{
+  char *os;
+
+  os = s;
+  t = t + k;
+  printf(2, "%c\n", *t);
+  while((*s++ = *t++) != 0 && n-- > 0 && *t != '\0')
+    ;
+  return os;
+}

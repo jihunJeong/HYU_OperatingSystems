@@ -49,9 +49,20 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  
+  //Project 1
   int priority;                // Process Priority (MLFQ)
   int level;                   // Process Queue Level
   int quantum;                 // Process Quantum
+  
+  //Project 2
+  int mode;                    // Process mode
+  int limit;                   // Process memory limit (bytes)
+  uint time;                   // Process execute time (ticks)
+  char *shmem;                 // Process shared memory
+
+  //Project 3
+  char *owner;                   // Process own type
 };
 
 // Process memory is laid out contiguously, low addresses first:
@@ -59,3 +70,5 @@ struct proc {
 //   original data and bss
 //   fixed-size stack
 //   expandable heap
+
+int increase(void);

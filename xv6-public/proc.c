@@ -92,6 +92,9 @@ found:
   p->priority = 0;
   p->level = 0;
   p->quantum = 0;
+  p->mode = 1;
+  p->limit = 0;
+  p->time = 0;
 
   release(&ptable.lock);
 
@@ -166,6 +169,11 @@ growproc(int n)
   struct proc *curproc = myproc();
 
   sz = curproc->sz;
+  
+  if(curproc-> limit != 0 && sz + n > curproc->limit) {
+      return -1;
+  }
+  
   if(n > 0){
     if((sz = allocuvm(curproc->pgdir, sz, sz + n)) == 0)
       return -1;
@@ -203,6 +211,11 @@ fork(void)
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
+  //Set project variable
+  np->mode = curproc->mode;
+  np->limit = curproc->limit;
+  
+  np->shmem = kalloc();
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -298,6 +311,7 @@ wait(void)
         p->parent = 0;
         p->name[0] = 0;
         p->killed = 0;
+        kfree(p->shmem);
         p->state = UNUSED;
         release(&ptable.lock);
         return pid;
@@ -426,6 +440,8 @@ scheduler(void)
       // Compare process level and choose minimum level
       if(p->level < temp->level){
         temp = p;
+      } else if(p->level == temp->level && p->quantum != 0) {
+        temp = p;
       }
       // Compare precess priority if they are same level
       else if(p->level == temp->level && p->priority > temp->priority){
@@ -478,7 +494,7 @@ scheduler(void)
   for(;;){
     // Enable interrupts on this processor.
     sti();
-
+    
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
@@ -684,6 +700,7 @@ procdump(void)
   }
 }
 
+//Project1_syscall
 int
 getlev(void)
 {
@@ -718,4 +735,151 @@ priorityboosting(void)
     p->level = 0;
     p->quantum = 0;
   }
+}
+
+//Project2_syscall
+int
+getadmin(char* password)
+{
+    const char* my = "2016025969";
+    
+    //If password is correct change mode and return 0 else return -1
+    if(strncmp(password, my, 10) == 0) {        
+        //change to administrator mode(0)
+        myproc()->mode = 0; 
+        return 0;
+    }
+    
+    return -1;
+}
+
+int
+setmemorylimit(int pid, int limit)
+{
+    if(limit < 0) {
+        return -1;
+    }
+    struct proc *curproc = myproc();
+    if(curproc->mode == 1) {
+        return -1;
+    }
+
+    struct proc *p;
+    acquire(&ptable.lock);
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->pid == pid && p->state != UNUSED) {
+        if(limit == 0) {
+            p->limit = 0;
+        } else {
+            if(p->sz > limit) {
+                release(&ptable.lock);
+                return -1;
+            } else {
+              p->limit = limit;
+            }
+        }
+        release(&ptable.lock);        
+        return 0;
+      }
+    }
+    release(&ptable.lock);
+    
+    return -1;
+}
+
+// Return the address of the PTE in page table pgdir
+// that corresponds to virtual address va.  If alloc!=0,
+// create any required page table pages.
+pte_t *
+walkpgdir(pde_t *pgdir, const void *va, int alloc)
+{
+  pde_t *pde;
+  pte_t *pgtab;
+
+  pde = &pgdir[PDX(va)];
+  if(*pde & PTE_P){
+    pgtab = (pte_t*)P2V(PTE_ADDR(*pde));
+  } else {
+    if(!alloc || (pgtab = (pte_t*)kalloc()) == 0)
+      return 0;
+    // Make sure all those PTE_P bits are zero.
+    memset(pgtab, 0, PGSIZE);
+    // The permissions here are overly generous, but they can
+    // be further restricted by the permissions in the page table
+    // entries, if necessary.
+    *pde = V2P(pgtab) | PTE_P | PTE_W | PTE_U;
+  }
+  return &pgtab[PTX(va)];
+}
+
+char *getshmem(int pid)
+{
+    //Get shared Memory from proc
+    char *walk = 0;
+    uint *pte = 0;
+
+    struct proc *p;
+    
+    acquire(&ptable.lock);
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+        if(p->pid == pid) {
+          walk = p->shmem;   
+
+        if(pid == myproc()->pid) {
+          //Access current process shared memeory
+          pte = walkpgdir(myproc()->pgdir, (char*)((uint)walk), 1);
+          *pte |=  PTE_P | PTE_U | PTE_W; //Give all authority
+          //walk = memset(walk, 0, PGSIZE);
+          break;
+        } else {
+          //Access another process shared memory
+          pte = walkpgdir(myproc()->pgdir, (char*)((uint)walk), 1);
+          *pte = V2P(walk) | PTE_P | PTE_U; //Give all authority except Write
+          break;
+    }}}
+  
+    release(&ptable.lock);
+    return walk;
+}
+
+int increase(void)
+{
+    //Increase process execute time
+    struct proc *p;
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+        if(p->state != UNUSED) {
+            //Increase ten count becouse the time interrupter in xv6 is every 10 ticks
+            p->time = p->time + 10;
+        }
+    }
+    return 0;
+}
+
+int getinfo(void)
+{
+    int gap;
+    struct proc *p;
+
+    cprintf("NAME                       | PID | TIME (ms) | MEMORY (bytes) | MEMLIM (bytes)\n");
+  
+    acquire(&ptable.lock);
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+      if(p->state != UNUSED) {  
+        cprintf("%s", &(p->name));
+        for(gap = strlen(p->name); gap < 28; gap++) {
+            cprintf(" ");
+        }
+        cprintf("  %d      %d          %d                 %d\n", p->pid, p->time, p->sz, p->limit);
+      }
+   }
+
+   release(&ptable.lock);
+   return 0;
+}
+
+int
+setowner(char* username)
+{
+    strncpy(myproc()->owner, username, 20); 
+    return 0;
 }

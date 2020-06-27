@@ -192,5 +192,17 @@ void			yield(void);
 int     		getlev(void);
 int 			setpriority(int pid, int priority);
 
+//project2_syscall.c
+int             getadmin(char* password);
+int             exec2(char* path, char** argv, int stacksize);
+int             setmemorylimit(int pid, int limit);
+char*           getshmem(int pid);
+int             getinfo(void);
+
+//project3_syscall.c
+int             useradd(char* username, char* password);
+int             userdel(char* username);
+int             setowner(char* username);
+
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

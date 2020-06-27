@@ -26,13 +26,21 @@ int uptime(void);
 void yield(void);
 int getlev(void);
 int setpriority(int, int);
+int getadmin(char*);
+int exec2(char*, char**, int);
+int setmemorylimit(int, int);
+char* getshmem(int);
+char* getinfo(void);
+int useradd(char*, char*);
+int userdel(char*);
+int setowner(char*);
 
 // ulib.c
 int stat(const char*, struct stat*);
 char* strcpy(char*, const char*);
 void *memmove(void*, const void*, int);
 char* strchr(const char*, char c);
-int strcmp(const char*, const char*);
+int strcmp(const char*, const char*);;
 void printf(int, const char*, ...);
 char* gets(char*, int max);
 uint strlen(const char*);
@@ -40,3 +48,5 @@ void* memset(void*, int, uint);
 void* malloc(uint);
 void free(void*);
 int atoi(const char*);
+int strscmp(const char*, const char*, uint n);
+char* strscpy(char*, const char*, int, int);

@@ -8,7 +8,7 @@
 #include "elf.h"
 
 int
-exec(char *path, char **argv)
+exec2(char *path, char **argv, int stacksize)
 {
   char *s, *last;
   int i, off;
@@ -20,16 +20,20 @@ exec(char *path, char **argv)
   struct proc *curproc = myproc();
 
   begin_op();
-
+  
+  if(stacksize < 1 || stacksize > 100) {
+    return -1;
+  }
+  
   if((ip = namei(path)) == 0){
     end_op();
     cprintf("exec: fail\n");
     return -1;
   }
+
   ilock(ip);
   pgdir = 0;
-
-
+  
   // Check ELF header
   if(readi(ip, (char*)&elf, 0, sizeof(elf)) != sizeof(elf))
     goto bad;
@@ -64,9 +68,9 @@ exec(char *path, char **argv)
   // Allocate two pages at the next page boundary.
   // Make the first inaccessible.  Use the second as the user stack.
   sz = PGROUNDUP(sz);
-  if((sz = allocuvm(pgdir, sz, sz + 2*PGSIZE)) == 0)
+  if((sz = allocuvm(pgdir, sz, sz + (stacksize+1)*PGSIZE)) == 0)
     goto bad;
-  clearpteu(pgdir, (char*)(sz - 2*PGSIZE));
+  clearpteu(pgdir, (char*)(sz - (stacksize+1)*PGSIZE));
   sp = sz;
   
   // Push argument strings, prepare rest of stack in ustack.

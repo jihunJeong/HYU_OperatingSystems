@@ -18,16 +18,17 @@ main(void)
   }
   dup(0);  // stdout
   dup(0);  // stderr
+  printf(1, "init: starting login\n");
+  for(;;) {
 
-  for(;;){
-    printf(1, "init: starting sh\n");
     pid = fork();
     if(pid < 0){
       printf(1, "init: fork failed\n");
       exit();
     }
     if(pid == 0){
-      exec("sh", argv);
+      //execute p3_login
+      exec("p3_login", argv);
       printf(1, "init: exec sh failed\n");
       exit();
     }
