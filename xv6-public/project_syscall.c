@@ -123,38 +123,3 @@ sys_getinfo(void)
 {
     return getinfo();
 }
-
-
-//Project3_syscall
-int
-sys_useradd(void)
-{
-    char *username;
-    char *password;
-    
-    if(strncmp(myproc()->owner, "root", 20) != 0) {
-        return -1;
-    }
-
-    if(argstr(0, &username) < 0 || argstr(0, &password) < 0) {
-        return -1;
-    }
-
-    return useradd(username, password);
-}
-
-int
-sys_userdel(void)
-{
-    char *username;
-
-    if(myproc()->owner != 0) {
-        return -1;
-    }
-    
-    if(argstr(0, &username) < 0) {
-        return -1;
-    }
-
-    return userdel(username);
-}

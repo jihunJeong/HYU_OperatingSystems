@@ -73,7 +73,7 @@ main(void)
       continue;
     }
       //If Input Information is Good, then exectue Shell program
-      setowner(userbuf);
+      //setowner(userbuf);
       exec("sh", argv);
       printf(1, "init: exec login failed\n");
       exit();

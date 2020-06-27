@@ -490,7 +490,7 @@ int useradd(char* username, char* password)
             return 0;
           }
 
-          strncpy(dir->author, username, 20);
+          //strncpy(dir->author, username, 20);
           iupdate(dir);
           iunlockput(dir);
           end_op();

@@ -111,8 +111,6 @@ extern int sys_exec2(void);
 extern int sys_setmemorylimit(void);
 extern int sys_getshmem(void);
 extern int sys_getinfo(void);
-extern int sys_useradd(void);
-extern int sys_userdel(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -143,9 +141,6 @@ static int (*syscalls[])(void) = {
 [SYS_exec2]   sys_exec2,
 [SYS_setmemorylimit] sys_setmemorylimit,
 [SYS_getshmem] sys_getshmem,
-[SYS_getinfo] sys_getinfo,
-[SYS_useradd] sys_useradd,
-[SYS_userdel] sys_userdel,
 };
 
 void
